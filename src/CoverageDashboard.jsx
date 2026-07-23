@@ -492,7 +492,10 @@ function CategoryDrawer({ cat, count, rows, onClose, onOpenDetail, t }) {
         display:"flex", flexDirection:"column",
         animation:"drwSlide .25s cubic-bezier(.4,0,.2,1)",
       }}>
-        <div style={{ padding:"20px 20px 16px", borderBottom:`1px solid ${C.border}`, flexShrink:0 }}>
+        <div style={{
+          padding:"20px 20px 16px", paddingTop:"calc(20px + env(safe-area-inset-top, 0px))",
+          borderBottom:`1px solid ${C.border}`, flexShrink:0,
+        }}>
           <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
             <div style={{ width:38, height:38, borderRadius:10, background:bg,
               display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
