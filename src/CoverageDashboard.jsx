@@ -538,6 +538,11 @@ function CategoryDrawer({ cat, count, rows, onClose, onOpenDetail, t }) {
 /* ─── KPI DECK — panel gelap berisi 3 KPI utama + 4 kartu pipeline ───────── */
 // Card persen (documentedPct) TIDAK pernah expand-hover (req #10) — cuma
 // published & documented yang punya preview list.
+// KEMBALI ke overlay terpisah (opacity + transform + transition) — versi
+// "card asli melebar/tumbuh di tempat" (grid-template-rows dgn <span>)
+// ternyata masih bocor konten (span inline tidak clip overflow dgn benar),
+// dicoba beberapa kali tidak stabil. User minta balik ke settingan overlay
+// yang sudah pernah terbukti jalan sebelumnya.
 function KpiCard({ cat, value, isPct, onOpen, onOpenDetail, catKey, denom, previewRows, t }) {
   const { color, bg } = catColors(cat);
   const Icon = cat.icon;
@@ -960,23 +965,23 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
         }
         .kpi-deck-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: none; color: rgba(255,255,255,0.55); margin-bottom: 3px; }
 
-        .kpi-grid  { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; position: relative; }
+        /* align-items: flex-start (BUKAN stretch) — sengaja, supaya tinggi
+           tiap card independen. Kalau stretch, semua card ikut "ditarik"
+           setinggi card yang lagi expand (dilaporkan user: card lain ikut
+           kelihatan tinggi kosong padahal tidak sedang di-hover). */
+        .kpi-grid  { display: flex; gap: 12px; position: relative; align-items: flex-start; }
 
         /* ── VIDEO PRODUCTION PIPELINE — panel TERPISAH, graphite/slate
-           (bukan teal — lihat pipeDeck/pipeDeckSoft di styles/theme.js).
-           Sengaja TIDAK pakai ruang cadangan permanen (percobaan sebelumnya
-           bikin kotak kosong kepanjangan saat tidak di-hover) — hover-panel
-           di bawah adalah FLOATING CARD (overlay + shadow tegas) yang boleh
-           tumpang tindih sesaat dgn section di bawahnya SELAMA hover aktif
-           saja (pola popover/tooltip standar), bukan pengorbanan whitespace
-           permanen. */
+           (bukan teal — lihat pipeDeck/pipeDeckSoft di styles/theme.js). Card
+           di dalamnya expand via overlay (.pipe-hover-panel, position:absolute)
+           — tidak mendorong layout section di bawahnya sama sekali. */
         .pipe-deck {
           position: relative; border-radius: 20px;
           background: linear-gradient(150deg, ${C.pipeDeckSoft} 0%, ${C.pipeDeck} 62%);
           padding: 18px 22px 20px; margin-bottom: 40px;
           box-shadow: 0 8px 26px rgba(6,9,14,0.32), 0 2px 6px rgba(10,15,30,0.1);
         }
-        .pipe-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; position: relative; }
+        .pipe-grid { display: flex; gap: 14px; position: relative; align-items: flex-start; }
 
         .pipe-label-row {
           display: flex; align-items: flex-start; justify-content: space-between;
@@ -986,26 +991,11 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
         .pipe-label-hint { display: block; font-size: 10.5px; font-weight: 500; color: rgba(255,255,255,0.42); margin-top: 3px; }
 
         /* 3 KPI: kartu putih solid (hasil/rekap) — ANGKA paling dominan.
-           kpi-card-wrap membungkus tombol + hover-panel (req #16: KPI TETAP
-           solid putih, tidak ikut jadi glass — beda dari pipe-card-wrap). */
-        /* z-index TINGGI SENGAJA — bukan sekadar "di atas kartu lain di deck
-           yang sama". Section Coverage Area di bawahnya berisi peta Leaflet
-           yang elemen internalnya TIDAK terkurung di stacking context
-           sendiri (parent-nya cuma position:relative TANPA z-index, jadi
-           tidak membentuk context baru), sehingga z-index itu "bocor" dan
-           ikut bersaing langsung di context yang sama dgn hover-panel ini:
-           atribusi (650), tombol aksi custom (700), DAN kontrol bawaan
-           Leaflet sendiri (class leaflet-control / leaflet-top / leaflet-bottom
-           = 1000 by default) — 1100 aman di atas SEMUA itu, masih di bawah
-           overlay fullscreen peta (z-index 1200) kalau itu aktif.
-           transition z-index dgn delay HANYA di base state (bukan di
-           :hover) — trik supaya z-index tetap tinggi selama 300ms SETELAH
-           mouse keluar (delay = durasi fade-out hover-panel), baru turun.
-           Tanpa ini, z-index anjlok LANGSUNG saat :hover lepas padahal panel
-           masih fade-out ~300ms — panel kelihatan "nyelip ke belakang" peta
-           di tengah animasi keluar (dilaporkan user). */
+           kpi-card-wrap membungkus tombol + hover-panel (overlay terpisah,
+           settingan yang terbukti stabil — user minta balik ke sini setelah
+           versi "card asli melebar di tempat" bermasalah/tidak stabil). */
         .kpi-card-wrap {
-          position: relative; z-index: 0;
+          flex: 1 1 0%; min-width: 0; position: relative;
           transition: z-index 0s linear .3s;
         }
         .kpi-card-wrap:hover { z-index: 1100; transition-delay: 0s; }
@@ -1028,10 +1018,8 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
            "diteruskan" lewat kaca. Beda kelas visual dari KPI: ini "yang
            sedang mengalir", bukan hasil akhir. Panah antar kartu menegaskan
            urutan alur produksi. */
-        /* Sama alasannya dgn .kpi-card-wrap di atas (z-index delay-on-exit
-           trick) — lihat komentar panjang di situ. */
         .pipe-card-wrap {
-          position: relative; z-index: 0;
+          flex: 1 1 0%; min-width: 0; position: relative;
           transition: z-index 0s linear .3s;
         }
         .pipe-card-wrap:hover { z-index: 1100; transition-delay: 0s; }
@@ -1044,7 +1032,7 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
           border-radius: 14px;
           border: 1px solid rgba(255,255,255,0.22);
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 18px rgba(6,20,18,0.22);
-          transition: background .18s cubic-bezier(0.85,0.09,0.15,0.91), border-color .18s cubic-bezier(0.85,0.09,0.15,0.91), transform .18s cubic-bezier(0.85,0.09,0.15,0.91), box-shadow .18s cubic-bezier(0.85,0.09,0.15,0.91);
+          transition: background .18s cubic-bezier(0.85,0.09,0.15,0.91), border-color .18s cubic-bezier(0.85,0.09,0.15,0.91), transform .18s cubic-bezier(0.85,0.09,0.15,0.91);
           padding: 12px 14px 10px;
         }
         .pipe-card:hover {
@@ -1052,7 +1040,7 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
           border-color: rgba(255,255,255,0.4);
           transform: translateY(-2px);
         }
-        .pipe-card:not(:nth-child(4))::after {
+        .pipe-card-wrap:not(:last-child)::after {
           content: '›';
           position: absolute; right: -12px; top: 50%; transform: translateY(-54%);
           font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.4);
@@ -1062,31 +1050,22 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
           .pipe-card { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(15,50,46,0.92); }
         }
 
-        /* ── HOVER-EXPAND PANEL (req #9/#11/#12) — overlay position:absolute,
-           TIDAK mendorong layout (req: no layout shift). Animasi MURNI pakai
-           transform (scale dari 0, tanpa opacity sama sekali) — panel benar2
-           tidak ada wujud (scale 0 = tidak memakan ruang visual) saat idle,
-           lalu "tumbuh" dari titik asalnya saat di-hover. Cuma satu properti
-           yang dianimasikan (transform) → di-composite GPU langsung tanpa
-           memicu layout/paint ulang, hasilnya terasa lebih solid/keren
-           dibanding fade opacity biasa. will-change kasih hint browser
-           siapkan compositing layer dari awal (bukan pas animasi baru
-           mulai — mengurangi micro-jank di frame pertama). Easing ease-in-out
-           simetris (cubic-bezier), bukan linear. Disembunyikan total di
-           device tanpa hover asli (req #14 — mobile/touch tetap klik
-           langsung ke drawer). ────── */
+        /* ── HOVER-EXPAND PANEL — overlay position:absolute, TIDAK mendorong
+           layout (background/section lain diam total). Animasi opacity +
+           transform (translateY) + transition, ease-in-out. Padding penuh
+           di panel sendiri (bukan nempel ke tepi). Warna gelap utk versi
+           Pipeline (kontras dgn teks putih), solid putih utk versi KPI. */
         .kpi-hover-panel, .pipe-hover-panel {
           position: absolute; left: 0; right: 0; top: 0; z-index: 5;
           border-radius: 14px; padding: 16px 16px 12px;
           display: flex; flex-direction: column; gap: 2px;
-          pointer-events: none;
-          transform: scale(0); transform-origin: top center;
-          will-change: transform;
-          transition: transform .34s cubic-bezier(0.85,0.09,0.15,0.91);
+          opacity: 0; pointer-events: none;
+          transform: translateY(-6px); transform-origin: top;
+          transition: opacity .3s cubic-bezier(0.85,0.09,0.15,0.91), transform .3s cubic-bezier(0.85,0.09,0.15,0.91);
         }
         .kpi-card-wrap:hover .kpi-hover-panel,
         .pipe-card-wrap:hover .pipe-hover-panel {
-          pointer-events: auto; transform: scale(1);
+          opacity: 1; pointer-events: auto; transform: translateY(0);
         }
         .kpi-hover-panel {
           background: ${C.surface};
@@ -1096,8 +1075,10 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
           background: linear-gradient(160deg, ${C.pipeDeckSoft} 0%, ${C.pipeDeck} 100%);
           -webkit-backdrop-filter: blur(22px) saturate(1.7);
           backdrop-filter: blur(22px) saturate(1.7);
-          border: 1px solid rgba(255,255,255,0.16);
           box-shadow: 0 18px 40px rgba(6,9,14,0.45);
+        }
+        @media (prefers-reduced-transparency: reduce) {
+          .pipe-hover-panel { backdrop-filter: none; -webkit-backdrop-filter: none; background: ${C.pipeDeck}; }
         }
         .hp-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
         .hp-num { font-size: inherit; }
@@ -1227,16 +1208,16 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
         @media (max-width: 768px)  {
           .hl-root    { padding: 16px 16px 80px; }
           .cal-btn    { display: none; }
-          .kpi-grid   { grid-template-columns: 1fr; }
-          .pipe-grid  { grid-template-columns: repeat(2, 1fr); }
+          .kpi-grid   { flex-direction: column; }
+          .pipe-grid  { flex-wrap: wrap; }
+          .pipe-card-wrap { flex: 1 1 calc(50% - 7px); }
           /* Grid 2x2 di mobile — panah alur kiri→kanan jadi menyesatkan
              (kartu ke-2 "menunjuk" keluar baris), sembunyikan saja. */
-          .pipe-card::after { display: none; }
+          .pipe-card-wrap::after { display: none; }
           .kpi-num    { font-size: 38px; }
-          /* Hover-expand mati total di touch device (lihat @media hover:none
-             — .kpi-hover-panel/.pipe-hover-panel { display:none }), jadi
-             margin-bottom besar (reserve utk floating panel desktop) cuma
-             jadi jarak kosong percuma di sini — kembalikan ke normal. */
+          /* Hover-expand (melebar+tumbuh) mati total di touch device (lihat
+             @media hover:none), jadi margin-bottom besar cuma perlu ukuran
+             normal di sini. */
           .kpi-deck   { margin-bottom: 28px; }
           .pipe-deck  { margin-bottom: 28px; }
           /* Glass-blur 40% transparan — khusus mobile (pola app ini). */
@@ -1248,7 +1229,7 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
           .drawer-list { padding-bottom: 6px; }
         }
         @media (max-width: 768px) and (hover: none) {
-          .kpi-card:hover, .pipe-card:hover { transform:none; box-shadow:0 1px 3px rgba(10,15,30,0.12); }
+          .kpi-card-wrap:hover, .pipe-card-wrap:hover { transform:none; box-shadow:0 1px 3px rgba(10,15,30,0.12); }
           .lst-seeall:hover { background:none; }
           .lst-row:hover .lst-row-name { color:${C.textH}; }
           .year-chart-col.is-hovered .year-chart-bar { filter:none; transform:none; box-shadow:0 5px 14px rgba(21,154,138,.22); }

@@ -103,9 +103,18 @@ export default function SplashScreen({ ready }) {
 
         .splash-content { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:22px; }
         .splash-mark { position:relative; width:min(620px, 82vw); }
-        .splash-wordmark { position:relative; color:#202A2D; font-size:clamp(18px, 3vw, 32px); font-weight:750; letter-spacing:-.045em; line-height:1.15; text-align:center; white-space:nowrap; text-shadow:0 1px 1px rgba(255,255,255,.4); }
-        .splash-wordmark::after { content:attr(data-text); position:absolute; inset:0; pointer-events:none; color:transparent; -webkit-text-fill-color:transparent; background:linear-gradient(105deg, transparent 30%, rgba(62,189,172,.18) 40%, #3EBDAC 50%, rgba(62,189,172,.18) 60%, transparent 70%); background-size:260% 100%; background-position:140% 50%; -webkit-background-clip:text; background-clip:text; filter:drop-shadow(0 0 5px rgba(62,189,172,.2)); animation:splash-text-sweep 2s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
-        @keyframes splash-text-sweep { 0%, 4% { background-position:140% 50%; opacity:0; } 25% { background-position:-40% 50%; opacity:1; } 31%, 100% { background-position:-80% 50%; opacity:0; } }
+        .splash-wordmark {
+          position:relative; font-size:clamp(18px, 3vw, 32px); font-weight:750; letter-spacing:-.045em; line-height:1.15; text-align:center; white-space:nowrap;
+          background: linear-gradient(120deg, #252525 0%, #252525 40%, #3ebdac 50%, #252525 60%, #252525 100%);
+          -webkit-background-clip: text; background-clip: text;
+          color: transparent; -webkit-text-fill-color: transparent;
+          background-size: 200% 100%;
+          animation: shimmer 6s linear infinite;
+        }
+        @keyframes shimmer {
+          0%   { background-position: 200% 0; }
+          100% { background-position: -400% 0; }
+        }
         .splash-progress { width:min(220px, 44vw); height:4px; overflow:hidden; border-radius:999px; background:rgba(62,189,172,.16); }
         .splash-progress-fill { display:block; height:100%; border-radius:inherit; background:#3EBDAC; transition:width .32s cubic-bezier(0.65, 0, 0.35, 1); }
         .splash-logo-wipe::after { content:""; position:absolute; top:0; bottom:0; left:-22%; width:22%; pointer-events:none; background:linear-gradient(90deg, transparent, rgba(255,255,255,.62), transparent); mix-blend-mode:screen; opacity:0; animation:splash-sheen 3.2s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
@@ -129,7 +138,7 @@ export default function SplashScreen({ ready }) {
         }
 
         /* Reduced motion: logogram statis, tidak berputar. */
-        .splash.is-reduced .splash-wordmark::after { animation:none; opacity:0; filter:none; }
+        .splash.is-reduced .splash-wordmark { animation:none; background-position:0 0; }
         .splash.is-reduced .splash-logo-wipe::after { animation:none; display:none; }
       `}</style>
     </div>
