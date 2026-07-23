@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=sun-logogram" />
+    <link rel="apple-touch-icon" href="/favicon.svg?v=sun-logogram" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#F7F9FC" />
+    <!-- iOS full-bleed: bikin status bar transparan (konten topbar/bottom
+         nav "nembus" ke belakangnya) — cuma berlaku saat dibuka dari ikon
+         Home Screen (Add to Home Screen), bukan di tab Safari biasa (Safari
+         SELALU tampilkan chrome/address bar-nya sendiri di atas, tidak bisa
+         di-override situs manapun). -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SUN Dashboard" />
+    <title>Coverage Dashboard · SUN Energy</title>
+
+    <!-- Rethink Sans (brand font, self-hosted variable font — lihat @font-face
+         di src/index.css). Preload supaya teks tidak flash ganti font. -->
+    <link rel="preload" href="/fonts/RethinkSans-VariableFont_wght.ttf" as="font" type="font/ttf" crossorigin />
+
+    <!-- Preconnect ke origin eksternal yang PASTI dipakai tiap load — handshake
+         DNS+TLS dicicil di awal supaya fetch data/tile/thumbnail lebih cepat. -->
+    <link rel="preconnect" href="https://script.google.com" crossorigin />
+    <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin />
+    <link rel="preconnect" href="https://img.youtube.com" crossorigin />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

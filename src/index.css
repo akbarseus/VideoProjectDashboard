@@ -1,0 +1,175 @@
+/* ─── BRAND FONT: Rethink Sans (self-hosted variable font) ──────────────── */
+@font-face {
+  font-family: 'Rethink Sans';
+  src: url('/fonts/RethinkSans-VariableFont_wght.ttf') format('truetype-variations');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap; /* fallback tampil dulu, tidak boleh invisible text */
+}
+@font-face {
+  font-family: 'Rethink Sans';
+  src: url('/fonts/RethinkSans-Italic-VariableFont_wght.ttf') format('truetype-variations');
+  font-weight: 400 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ─── RESET & BASE ──────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Force light mode — override system dark preference entirely */
+:root {
+  color-scheme: light only;
+  --color-brand-teal: #3EBDAC;
+  --color-surface: #FFFFFF;
+  --color-bg: #F8FAFC;
+  --color-border: #E2E8F0;
+  --color-border-soft: #F0F4FA;
+  --color-text-heading: #0F172A;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #94A3B8;
+  --radius-card: 18px;
+  --shadow-card: 0 1px 3px rgba(15,23,42,0.08), 0 8px 24px rgba(15,23,42,0.05);
+  --glass-bg: rgba(255,255,255,0.58);
+  --glass-blur: 14px;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background: #F8FAFC;
+  /* PENTING: "clip", BUKAN "hidden". Kalau overflow-x diset non-"visible"
+     sementara overflow-y dibiarkan default ("visible"), spesifikasi CSS
+     MEMAKSA overflow-y jadi "auto" (efek samping otomatis) — itu bikin
+     html/body jadi scroll container baru, yang merusak posisi SEMUA
+     `position:sticky` di halaman manapun (elemen sticky jadi ikut scroll
+     keluar layar, bukan nempel — pernah kejadian di search+filter Detail
+     Proyek mobile). "clip" dikecualikan dari aturan pemaksaan itu, jadi
+     tetap mencegah overflow horizontal tanpa efek samping ini.
+     Fallback "hidden" utk browser sangat lama yg tidak kenal "clip". */
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+body {
+  margin: 0;
+  background: #F8FAFC;
+  color: #334155;
+  /* "clip" bukan "hidden" — lihat komentar panjang di rule `html` di atas. */
+  overflow-x: hidden;
+  overflow-x: clip;
+  max-width: 100vw;
+
+  /* Rethink Sans (brand) → system fallback */
+  font-family:
+    'Rethink Sans',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+/* ─── ROOT: full-bleed, no constrained width ────────────────────────────── */
+#root {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #F8FAFC;
+  /* "clip" bukan "hidden" — lihat komentar panjang di rule `html` di atas. */
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+/* Shared visual primitives — keep component styles focused on composition. */
+.ui-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.ui-section-title {
+  color: var(--color-text-heading);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.ui-glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.35);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.35);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .ui-glass {
+    background: rgba(255,255,255,0.96);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ─── TYPE HIERARCHY ────────────────────────────────────────────────────── */
+
+/* H1 — Page title, dashboard section hero */
+h1 {
+  font-size: 1.5rem;      /* 24px */
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  color: #0F172A;
+}
+
+/* H2 — Section heading, card title */
+h2 {
+  font-size: 1.125rem;    /* 18px */
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+  color: #0F172A;
+}
+
+/* H3 — Sub-section, card sub-title */
+h3 {
+  font-size: 0.9375rem;   /* 15px */
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  color: #0F172A;
+}
+
+/* H4 — Component label, table group header */
+h4 {
+  font-size: 0.8125rem;   /* 13px */
+  font-weight: 600;
+  line-height: 1.4;
+  color: #334155;
+}
+
+p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ─── SCROLLBAR ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
