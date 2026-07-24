@@ -1114,12 +1114,24 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
           border-radius: 14px; padding: 16px 16px 12px;
           display: flex; flex-direction: column; gap: 2px;
           pointer-events: none;
-          transform: scale(0.01); transform-origin: center top;
-          transition: transform .3s cubic-bezier(0.85,0.09,0.15,0.91);
+          /* visibility:hidden (BUKAN cuma scale(0)) — scale sekecil apa pun
+             tetap "ada" secara rendering (GPU compositing bisa nyisain
+             residu 1px hairline di tepi rounded-corner-nya, dilaporkan user:
+             sisa pixel nempel di atas card sehabis di-hover). visibility
+             benar-benar membatalkan rendering elemen ini total. Delay 0s
+             linear .3s (pola sama dgn z-index delay-on-exit di
+             kpi-card-wrap) — supaya pas hover BARU LEPAS, panel tetap
+             visible sepanjang animasi shrink-nya (.3s), baru disembunyikan
+             total TEPAT saat animasi selesai — bukan langsung ilang begitu
+             mouse keluar (yang bikin animasi keluarnya keputus). */
+          visibility: hidden;
+          transform: scale(0); transform-origin: center top;
+          transition: transform .3s cubic-bezier(0.85,0.09,0.15,0.91), visibility 0s linear .3s;
         }
         .kpi-card-wrap:hover .kpi-hover-panel,
         .pipe-card-wrap:hover .pipe-hover-panel {
-          pointer-events: auto; transform: scale(1);
+          pointer-events: auto; visibility: visible; transform: scale(1);
+          transition-delay: 0s;
         }
         .kpi-hover-panel {
           background: ${C.surface};

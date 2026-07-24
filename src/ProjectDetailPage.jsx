@@ -93,7 +93,7 @@ function Thumbnail({ project, t }) {
             else setBroken(true);
           }}
           alt={project.name}
-          style={{ width:"100%", aspectRatio:"16/9", maxHeight:440, objectFit:"cover", borderRadius:12, border:`1px solid ${C.border}`, display:"block" }}
+          style={{ width:"100%", aspectRatio:"16/9", maxHeight:"clamp(160px, 34vh, 420px)", objectFit:"cover", borderRadius:12, border:`1px solid ${C.border}`, display:"block" }}
         />
         <div style={{
           position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center",
@@ -112,7 +112,7 @@ function Thumbnail({ project, t }) {
 
   return (
     <div style={{
-      width:"100%", aspectRatio:"16/9", maxHeight:440,
+      width:"100%", aspectRatio:"16/9", maxHeight:"clamp(160px, 34vh, 420px)",
       background: `linear-gradient(135deg, ${cfg.bg} 0%, ${C.soft} 100%)`,
       borderRadius:10, display:"flex", flexDirection:"column",
       alignItems:"center", justifyContent:"center", gap:8,
@@ -133,7 +133,7 @@ function Thumbnail({ project, t }) {
 const ProjectCard = memo(function ProjectCard({ project, selected, onSelect, t }) {
   const cfg = rawCfg(project, t);
   return (
-    <div onClick={() => onSelect(project.id)} className="pc-card"
+    <div onClick={() => onSelect(project.id)} className="pc-card" data-project-id={project.id}
       style={{
         padding:"14px 16px", borderRadius:10, cursor:"pointer",
         border:`1.5px solid ${selected ? C.teal : C.border}`,
@@ -325,10 +325,57 @@ export default function ProjectDetailPage({ lang = "id", data, initialId, onMobi
   );
   const hasMoreProjects = visibleCount < filtered.length;
 
+  // `rows` SENGAJA bukan dependency di sini (dulu iya, ini penyebab bug lain
+  // yang ketemu pas investigasi bug user: fetch Google Apps Script lambat —
+  // beberapa detik — dan begitu data terbaru datang di background, `rows`
+  // dapat reference array BARU walau isinya sama/mirip. Kalau ikut jadi
+  // dependency, reset visibleCount+scrollTop ini re-fire diam-diam SETELAH
+  // proyek yang di-klik sudah benar ke-scroll ke atas, balikin scroll ke 0
+  // lagi — dan kalau user lagi manual scroll list-nya sendiri pas refresh
+  // background itu kelar, posisi scroll-nya ke-reset paksa juga. Reset
+  // pagination/scroll SEHARUSNYA cuma react ke filter yang user ubah sendiri.
   useEffect(() => {
     setVisibleCount(PROJECT_BATCH_SIZE);
     if (listRef.current && !isMobile) listRef.current.scrollTop = 0;
-  }, [deferredSearch, statusFilter, yearFilter, industryFilter, rows, isMobile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deferredSearch, statusFilter, yearFilter, industryFilter, isMobile]);
+
+  // Deep-link (klik proyek dari Dashboard/drawer/dst): pastikan proyek yang
+  // dituju bukan cuma "selected" secara data, tapi juga benar-benar KELIHATAN
+  // di list kiri — dilaporkan user, baris #1 yang tampil di list tidak sama
+  // dengan proyek yang lagi di-preview (posisi scroll list lama tidak ikut
+  // pindah, dan kalau proyeknya ada di luar batch 40 pertama, kartunya bahkan
+  // belum ke-render sama sekali). Declared SETELAH effect reset-visibleCount
+  // di atas (sengaja — effect ini jalan belakangan di commit yang sama,
+  // supaya bump visibleCount di sini tidak ketimpa balik ke 40).
+  useEffect(() => {
+    if (initialId == null || selected !== initialId || isMobile) return;
+    const idx = filtered.findIndex(p => p.id === initialId);
+    if (idx === -1) return; // belum masuk `filtered` — effect reset-filter di atas belum kelar
+    // Bump visibleCount dgn BUFFER (bukan cuma idx+1) — kalau target dipas-in
+    // jadi kartu PALING TERAKHIR yang di-render, tidak ada konten di
+    // bawahnya utk discroll — browser tidak bisa naikin dia ke posisi paling
+    // atas viewport (scrollTop mentok di max, target-nya nyangkut di
+    // tengah/bawah, BUKAN di baris #1). Bug persis yang dilaporkan user.
+    if (idx >= visibleCount) { setVisibleCount(Math.min(filtered.length, idx + PROJECT_BATCH_SIZE)); return; }
+    const container = listRef.current;
+    if (!container) return;
+    // setTimeout (BUKAN requestAnimationFrame) — pas 100+ kartu baru sekaligus
+    // di-render (batch besar dari bump visibleCount di atas), layout/paint
+    // browser belum tentu SELESAI persis di akhir commit React ini.
+    // scrollIntoView yang dipanggil terlalu dini kepakai posisi kartu yang
+    // masih akan bergeser, jadi hasil scrollnya "meleset" (dilaporkan user:
+    // baris #1 yang tampil bukan proyek yang di-preview). rAF sengaja
+    // dihindari di sini — rAF DIJEDA TOTAL browser kalau tab sedang tidak
+    // aktif/hidden (mis. dibuka via middle-click ke tab baru di background),
+    // jadi scroll-nya bisa tidak PERNAH jalan; setTimeout tetap jalan
+    // (cuma di-throttle, tidak dijeda permanen) di kondisi itu.
+    const timer = window.setTimeout(() => {
+      const target = [...container.querySelectorAll(".pc-card")].find(el => el.dataset.projectId === initialId);
+      if (target) target.scrollIntoView({ block: "start", behavior: "auto" });
+    }, 60);
+    return () => window.clearTimeout(timer);
+  }, [initialId, selected, filtered, visibleCount, isMobile]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -454,12 +501,9 @@ export default function ProjectDetailPage({ lang = "id", data, initialId, onMobi
   return (
     <div className="pd-page" style={{ minHeight:"100vh", background: C.bg, padding:"28px 24px 40px" }}>
       <div className="pd-title" style={{ marginBottom:18 }}>
-        <h1 style={{ fontSize:18, fontWeight:800, color: C.textH, letterSpacing:"-0.02em", margin:"0 0 4px" }}>
+        <h1 style={{ fontSize:18, fontWeight:800, color: C.textH, letterSpacing:"-0.02em", margin:0 }}>
           {t("Data","Data")}
         </h1>
-        <p style={{ fontSize:13, color: C.textSec, margin:0 }}>
-          {t("Lihat status dan seluruh tautan konten setiap proyek.", "View status and all content links for each project.")}
-        </p>
       </div>
 
       <div className="proj-grid">

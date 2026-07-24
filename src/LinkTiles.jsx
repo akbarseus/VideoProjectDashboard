@@ -1,4 +1,5 @@
-import { FileText, Award, Film, ArrowRight, ExternalLink } from "lucide-react";
+import { Ribbon, Film, ArrowRight, ExternalLink } from "lucide-react";
+import { GoogleDriveLogo } from "@phosphor-icons/react";
 import { YoutubeIcon, LinkedinIcon, InstagramIcon } from "./socialIcons";
 import { isValidUrl } from "./useVideoProjects";
 
@@ -49,11 +50,11 @@ export function LinkPreviewButton({ url, t, size = 26 }) {
  */
 function linkItems(row, t) {
   return [
-    { key:"dok", url: row.linkDokumentasi, icon: FileText,      color:"#64748B", label: t("Dok","Doc") },
+    { key:"dok", url: row.linkDokumentasi, icon: GoogleDriveLogo, color:"#4285F4", label: t("Drive","Drive") },
     { key:"yt",  url: row.linkYoutube,     icon: YoutubeIcon,   color:"#FF0000", label:"YouTube" },
     { key:"li",  url: row.linkLinkedin,    icon: LinkedinIcon,  color:"#0A66C2", label:"LinkedIn" },
     { key:"ig",  url: row.linkInstagram,   icon: InstagramIcon, color:"#E1306C", label:"Instagram" },
-    { key:"ev",  url: row.linkPeresmian,   icon: Award,         color:"#D97706", label: t("Rilis","Launch") },
+    { key:"ev",  url: row.linkPeresmian,   icon: Ribbon,        color:"#D97706", label: t("Peresmian","Inauguration") },
     { key:"vid", url: row.linkVideoOutput, icon: Film,          color:"#2563EB", label: t("Video","Video") },
   ];
 }
