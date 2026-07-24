@@ -280,11 +280,24 @@ export default function ProjectDetailPage({ lang = "id", data, initialId, onMobi
     if (isMobile) setMobileView("detail");
   };
 
-  // Kalau dibuka lewat "view more" dari halaman lain, pindah ke proyek itu —
-  // dan kalau lagi di mobile, langsung slide ke tampilan detail (bukan list).
+  // Kalau dibuka lewat "view more"/klik nama proyek dari halaman lain
+  // (Dashboard hover-panel, drawer, dst), pindah ke proyek itu — dan kalau
+  // lagi di mobile, langsung slide ke tampilan detail (bukan list).
+  // Filter (status/tahun/industri/search) di-reset ke "semua" di sini JUGA —
+  // BUG yang dilaporkan user: proyek yang di-klik dari Dashboard bisa dari
+  // tahun/status manapun, tapi filter tahun default di halaman ini adalah
+  // "Tahun Ini". Kalau proyek yang dituju tidak cocok filter yang lagi aktif,
+  // proyek itu ke-exclude dari `filtered`, lalu effect "selected hilang dari
+  // list -> pilih yang pertama" di bawah diam-diam GANTI ke proyek lain sama
+  // sekali (bukan proyek yang di-klik). Reset filter memastikan proyek yang
+  // dituju SELALU ikut ke-render, apa pun filter yang aktif sebelumnya.
   useEffect(() => {
     if (initialId != null) {
       setSelected(initialId);
+      setSearch("");
+      setStatusFilter("all");
+      setYearFilter("all");
+      setIndustryFilter("all");
       if (isMobile) setMobileView("detail");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -338,10 +351,21 @@ export default function ProjectDetailPage({ lang = "id", data, initialId, onMobi
   // kelihatan di list kiri — bikin default kanan & kiri tidak sinkron. Jadi
   // begitu daftar terlihat berubah, otomatis pilih item pertama yang tampil.
   useEffect(() => {
+    // GUARD (fix bug dilaporkan user — klik proyek dari Dashboard nyasar ke
+    // proyek lain): effect di atas (reset initialId) dan effect INI jalan di
+    // commit YANG SAMA setelah deep-link. Effect ini baca `filtered` dari
+    // render SEBELUM setYearFilter("all") di atas benar-benar diterapkan —
+    // jadi masih pakai yearFilter LAMA, proyek yang baru di-klik keanggap
+    // "tidak ada di filtered" (padahal cuma soal timing), lalu diam-diam
+    // di-redirect ke proyek lain. Selama `selected` masih persis proyek yang
+    // baru saja diminta lewat initialId, JANGAN override — biarkan filter
+    // menyusul dulu; baru setelah user pilih proyek LAIN secara manual,
+    // safety-net ini aktif lagi seperti biasa.
+    if (initialId != null && selected === initialId) return;
     if (filtered.length > 0 && !filtered.some(p => p.id === selected)) {
       setSelected(filtered[0].id);
     }
-  }, [filtered, selected]);
+  }, [filtered, selected, initialId]);
 
   const project = rows.find(p => p.id === selected) ?? null;
 
