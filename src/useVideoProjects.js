@@ -24,7 +24,7 @@ export const YEARS = [
   ...Array.from({ length: 6 }, (_, index) => String(CURRENT_YEAR - index)),
   "all",
 ];
-export const DEFAULT_YEAR = String(CURRENT_YEAR);
+export const DEFAULT_YEAR = "all";
 export const CURRENT_YEAR_STR = String(CURRENT_YEAR);
 
 function readSessionCache() {

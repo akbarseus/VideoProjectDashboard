@@ -78,6 +78,29 @@ function ScrollZoomGate({ active, onActiveChange }) {
   return null;
 }
 
+// FIX bug "peta cuma mengisi separuh card, sisanya blank" (dilaporkan user):
+// Leaflet mengukur lebar containernya SEKALI saat inisialisasi, lalu "beku"
+// di ukuran itu selamanya kalau container-nya belakangan berubah ukuran
+// TANPA event resize window (mis. kolom grid coverage-insights-grid baru
+// selesai reflow setelah chart di sebelahnya rerender, atau Suspense
+// resolve saat layout belum final). Tombol aksi (posisinya nempel ke
+// .coverage-map-box yang lebar penuh) jadi kelihatan "melayang" di area
+// blank kanan yang sebenarnya cuma leaflet-container lama yang menyempit.
+// ResizeObserver di container asli + invalidateSize() memaksa Leaflet
+// re-ukur tiap kali container-nya benar-benar berubah, apa pun sebabnya.
+function MapResizeSync() {
+  const map = useMap();
+
+  useEffect(() => {
+    const container = map.getContainer();
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [map]);
+
+  return null;
+}
+
 // Isi tooltip hover pin — thumbnail YouTube (kalau ada video valid) + nama
 // proyek di bawahnya. `onError` fallback ke teks-saja kalau thumbnail gagal
 // load (video sudah dihapus/private dll), bukan gambar kotak rusak.
@@ -182,6 +205,7 @@ export default function CoverageAreaMap({ rows, lang }) {
         scrollWheelZoom={false}
       >
         <ScrollZoomGate active={scrollZoomActive} onActiveChange={setScrollZoomActive} />
+        <MapResizeSync />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

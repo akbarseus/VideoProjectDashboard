@@ -385,23 +385,43 @@ function RowAccessory({ row, type, t, compact }) {
   );
 }
 
+// 4 kategori Pipeline punya attribut list yang disederhanakan (revisi
+// dashboard-tipe-kpi-and-list-revisions): tiap kategori cuma menampilkan
+// Nama + SATU attribut relevan (tanggal/status), bukan industry·tahun +
+// badge lengkap seperti kategori KPI (published/documented). Berlaku di
+// HoverRow (preview) MAUPUN ProjectRow (drawer) — satu sumber kebenaran.
+const SIMPLIFIED_PIPELINE_KEYS = new Set(["onDocSched", "editing", "onReview", "scheduled"]);
+
+function pipelineSecondary(catKey, row) {
+  if (catKey === "onDocSched") return row.tanggalDokumentasi ? formatDateDMY(row.tanggalDokumentasi) : "";
+  if (catKey === "scheduled") return row.tanggalTayang ? formatDateDMY(row.tanggalTayang) : "";
+  return "";
+}
+
 /* ─── HOVER-EXPAND MINI ROW — versi ringkas ProjectRow khusus dipakai di
    dalam kpi-hover-panel/pipe-hover-panel (req #9/#11 hero-pipeline-redesign).
    Terpisah dari ProjectRow (bukan reuse) karena ProjectRow hard-code warna
    tema terang lewat inline style — tidak bisa dioverride CSS utk versi
    "dark" (dipakai dalam pipe-card glass gelap). `dark` prop pilih palet. */
-function HoverRow({ row, accessory, onOpenDetail, t, last, dark }) {
-  const secondary = accessory === "youtube" && row.tanggalTayang
-    ? `${t("Tayang","Published")} ${formatDateDMY(row.tanggalTayang)}`
-    : `${row.industry} · ${row.year}`;
+function HoverRow({ row, accessory, catKey, onOpenDetail, t, last, dark }) {
+  const simplified = SIMPLIFIED_PIPELINE_KEYS.has(catKey);
+  const isReview = catKey === "onReview";
+  const secondary = simplified && !isReview ? pipelineSecondary(catKey, row) : "";
+  const showAccessory = !simplified;
   return (
     <button className={`hp-row${dark ? " hp-row-dark" : ""}`} onClick={() => onOpenDetail(row.id)}
       style={{ borderBottom: last ? "none" : `1px solid ${dark ? "rgba(255,255,255,0.14)" : C.borderSoft}` }}>
       <span className="hp-row-text">
         <span className="hp-row-name">{row.name}</span>
-        <span className="hp-row-sub">{secondary}</span>
+        {secondary && <span className="hp-row-sub">{secondary}</span>}
+        {/* onReview: badge status teks penuh (Client Review/Internal Review)
+            DI BAWAH nama (bukan sejajar di samping) — supaya nama proyek
+            tidak kepotong/terpotong ellipsis oleh lebar badge, dilaporkan
+            user. Ditaruh di dalam kolom hp-row-text yg sama, bukan sbg
+            accessory kanan terpisah. */}
+        {isReview && <span className="hp-row-status"><RowAccessory row={row} type={accessory} t={t} /></span>}
       </span>
-      <RowAccessory row={row} type={accessory} t={t} compact />
+      {showAccessory && <RowAccessory row={row} type={accessory} t={t} compact />}
     </button>
   );
 }
@@ -412,22 +432,25 @@ function HoverRow({ row, accessory, onOpenDetail, t, last, dark }) {
 // data saja"). Kalau datanya 1, ya tampil 1 baris saja.
 const HOVER_SLOT_COUNT = 5;
 
-function HoverRowSlots({ rows, accessory, onOpenDetail, t, dark }) {
+function HoverRowSlots({ rows, accessory, catKey, onOpenDetail, t, dark }) {
   if (rows.length === 0) {
     return <div className={`hp-empty${dark ? " hp-empty-dark" : ""}`}>{t("Belum ada proyek.","No projects yet.")}</div>;
   }
   return rows.map((r, i) => (
-    <HoverRow key={r.id} row={r} accessory={accessory} onOpenDetail={onOpenDetail} t={t}
+    <HoverRow key={r.id} row={r} accessory={accessory} catKey={catKey} onOpenDetail={onOpenDetail} t={t}
       last={i === rows.length - 1} dark={dark} />
   ));
 }
 
 // memo: baris list/drawer tidak perlu ikut re-render saat state parent
 // (drawer, filter tahun, count-up) berubah — datanya sama.
-const ProjectRow = memo(function ProjectRow({ row, accessory, onOpenDetail, t, last }) {
-  const secondary = accessory === "youtube" && row.tanggalTayang
-    ? `${t("Tayang","Published")} ${formatDateDMY(row.tanggalTayang)}`
-    : `${row.industry} · ${row.year}`;
+const ProjectRow = memo(function ProjectRow({ row, accessory, catKey, onOpenDetail, t, last }) {
+  const simplified = SIMPLIFIED_PIPELINE_KEYS.has(catKey);
+  const isReview = catKey === "onReview";
+  const secondary = simplified && !isReview
+    ? pipelineSecondary(catKey, row)
+    : "";
+  const showAccessory = !simplified;
   return (
     <button className="lst-row" onClick={() => onOpenDetail(row.id)}
       style={{ borderBottom: last ? "none" : `1px solid ${C.borderSoft}` }}>
@@ -438,20 +461,30 @@ const ProjectRow = memo(function ProjectRow({ row, accessory, onOpenDetail, t, l
           overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
           {row.name}
         </span>
-        <span style={{ display:"block", fontSize:11, color:C.textSec, marginTop:1 }}>
-          {secondary}
-        </span>
+        {secondary && (
+          <span style={{ display:"block", fontSize:11, color:C.textSec, marginTop:1 }}>
+            {secondary}
+          </span>
+        )}
+        {/* onReview: badge status DI BAWAH nama, bukan sejajar di kanan —
+            konsisten dgn HoverRow (dilaporkan user: nama kepotong ellipsis
+            kalau badge sejajar di samping). */}
+        {isReview && (
+          <span style={{ display:"block", marginTop:4 }}>
+            <RowAccessory row={row} type={accessory} t={t} />
+          </span>
+        )}
       </span>
       <span style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
         {isPreviewEligible(row) && <LinkPreviewButton url={row.linkPreview} t={t} />}
-        <RowAccessory row={row} type={accessory} t={t} />
+        {showAccessory && <RowAccessory row={row} type={accessory} t={t} />}
       </span>
     </button>
   );
 });
 
 /* ─── DRAWER — slide-in daftar lengkap per kategori ─────────────────────── */
-function CategoryDrawer({ cat, count, rows, onClose, onOpenDetail, t }) {
+function CategoryDrawer({ cat, catKey, count, rows, onClose, onOpenDetail, t }) {
   const { color, bg } = catColors(cat);
   const Icon = cat.icon;
 
@@ -481,12 +514,20 @@ function CategoryDrawer({ cat, count, rows, onClose, onOpenDetail, t }) {
 
   return (
     <>
+      {/* z-index 1200/1201 — HARUS di atas SEMUA layer lain di app ini (hover
+          panel kpi-card-wrap:hover 1100, kontrol Leaflet 1000, menu
+          YearDropdown 999), bukan cuma di atas konten biasa. Sebelumnya cuma
+          400/401 — lebih RENDAH dari .coverage-map-actions (700) di peta,
+          jadi tombol fullscreen peta "menembus" ke atas drawer yang lagi
+          terbuka (drawer overlay tidak me-resize layout di baliknya, cuma
+          menutupi sebagian layar, jadi elemen absolute di balik drawer yang
+          z-index-nya lebih tinggi tetap kelihatan). Dilaporkan user. */}
       <div onClick={onClose} style={{
         position:"fixed", inset:0, background:"rgba(15,23,42,0.2)",
-        zIndex:400, animation:"drwFade .2s ease",
+        zIndex:1200, animation:"drwFade .2s ease",
       }} />
       <div className="drawer-panel" style={{
-        position:"fixed", top:0, right:0, bottom:0, zIndex:401,
+        position:"fixed", top:0, right:0, bottom:0, zIndex:1201,
         width:"min(420px,100vw)",
         boxShadow:"-12px 0 48px rgba(15,23,42,0.12)",
         display:"flex", flexDirection:"column",
@@ -524,7 +565,7 @@ function CategoryDrawer({ cat, count, rows, onClose, onOpenDetail, t }) {
             </div>
           ) : rows.map((r, i) => (
             <div key={r.id} style={{ padding:"0 8px" }}>
-              <ProjectRow row={r} accessory={cat.accessory} onOpenDetail={onOpenDetail} t={t}
+              <ProjectRow row={r} accessory={cat.accessory} catKey={catKey} onOpenDetail={onOpenDetail} t={t}
                 last={i === rows.length - 1} />
             </div>
           ))}
@@ -574,7 +615,7 @@ function KpiCard({ cat, value, isPct, onOpen, onOpenDetail, catKey, denom, previ
           <div className="kpi-label">{cat.label}</div>
           {denom && <div className="kpi-denom">{denom}</div>}
           <div className="hp-divider" />
-          <HoverRowSlots rows={previewRows} accessory={cat.accessory} onOpenDetail={onOpenDetail} t={t} />
+          <HoverRowSlots rows={previewRows} accessory={cat.accessory} catKey={catKey} onOpenDetail={onOpenDetail} t={t} />
           <button className="hp-seeall" onClick={() => onOpen(catKey)}>
             {t("Lihat semua","See all")} <ArrowUpRight size={11} />
           </button>
@@ -608,7 +649,7 @@ function PipeCard({ cat, value, onOpen, onOpenDetail, catKey, previewRows, t }) 
         </div>
         <div className="pipe-label hp-pipe-label">{cat.label}</div>
         <div className="hp-divider hp-divider-dark" />
-        <HoverRowSlots rows={previewRows} accessory={cat.accessory} onOpenDetail={onOpenDetail} t={t} dark />
+        <HoverRowSlots rows={previewRows} accessory={cat.accessory} catKey={catKey} onOpenDetail={onOpenDetail} t={t} dark />
         <button className="hp-seeall hp-seeall-dark" onClick={() => onOpen(catKey)}>
           {t("Lihat semua","See all")} <ArrowUpRight size={11} />
         </button>
@@ -676,12 +717,6 @@ const PipelineDeck = memo(function PipelineDeck({ pipelineMetrics, cats, onOpen,
           <div className="pipe-deck-title">{t("Video Production Pipeline","Video Production Pipeline")}</div>
           <span className="pipe-label-hint">{t("urut alur kerja","in workflow order")}</span>
         </div>
-        <span className="pipe-live-badge" title={t(
-          "Selalu real-time — tidak terpengaruh filter tahun di panel Video Progress Overall",
-          "Always real-time — not affected by the year filter on the Video Progress Overall panel")}>
-          <span className="pipe-live-dot" aria-hidden="true" />
-          {t("Selalu real-time","Always live")}
-        </span>
       </div>
       <div className="pipe-grid">
         <PipeCard cat={cats.onDocSched} value={pipelineMetrics.onDocSched} onOpen={onOpen} onOpenDetail={onOpenDetail}
@@ -867,7 +902,12 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
   useEffect(() => { sessionCountUpDone = true; }, []);
 
   const data = useMemo(() => filterByYear(allRows, year), [allRows, year]);
-  const m    = useMemo(() => levelMetrics(data), [data]);
+  // "Video Progress Overall" (m/hoverRows.published/documented/drawer KPI)
+  // KHUSUS project Tipe=Portofolio — project Tipe=Others tidak masuk KPI ini
+  // sama sekali, tapi tetap terhitung normal di Pipeline (pipelineMetrics
+  // tetap pakai allRows, tidak difilter Tipe apa pun).
+  const portfolioData = useMemo(() => data.filter(r => r.tipe !== "Others"), [data]);
+  const m    = useMemo(() => levelMetrics(portfolioData), [portfolioData]);
   const pipelineMetrics = useMemo(() => levelMetrics(allRows), [allRows]);
   const cats = useMemo(() => getCategories(t), [lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -889,13 +929,13 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
   // yang bisa ditampilkan).
   const HOVER_PREVIEW_LIMIT = HOVER_SLOT_COUNT;
   const hoverRows = useMemo(() => ({
-    published:  data.filter(cats.published.filter).sort(cats.published.sort).slice(0, HOVER_PREVIEW_LIMIT),
-    documented: data.filter(cats.documented.filter).sort(cats.documented.sort).slice(0, HOVER_PREVIEW_LIMIT),
+    published:  portfolioData.filter(cats.published.filter).sort(cats.published.sort).slice(0, HOVER_PREVIEW_LIMIT),
+    documented: portfolioData.filter(cats.documented.filter).sort(cats.documented.sort).slice(0, HOVER_PREVIEW_LIMIT),
     onDocSched: allRows.filter(cats.onDocSched.filter).sort(cats.onDocSched.sort).slice(0, HOVER_PREVIEW_LIMIT),
     editing:    allRows.filter(cats.editing.filter).sort(cats.editing.sort).slice(0, HOVER_PREVIEW_LIMIT),
     onReview:   allRows.filter(cats.onReview.filter).sort(cats.onReview.sort).slice(0, HOVER_PREVIEW_LIMIT),
     scheduled:  allRows.filter(cats.scheduled.filter).sort(cats.scheduled.sort).slice(0, HOVER_PREVIEW_LIMIT),
-  }), [data, allRows, cats]);
+  }), [portfolioData, allRows, cats]);
 
   // Keterangan "dari total berapa" (req #3-5 hero-pipeline-redesign) — semua
   // dari `m` (levelMetrics(data), sudah terfilter tahun yang sama utk
@@ -915,7 +955,9 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
   // membingungkan (dilaporkan user).
   const PIPELINE_DRAWER_KEYS = useMemo(() => new Set(["onDocSched", "editing", "onReview", "scheduled"]), []);
   const drawerCat  = drawer ? cats[drawer] : null;
-  const drawerSource = drawer && PIPELINE_DRAWER_KEYS.has(drawer) ? allRows : data;
+  // Kategori KPI (published/documentedPct/documented) pakai portfolioData
+  // (bukan `data`) supaya drawer-nya konsisten exclude Tipe=Others juga.
+  const drawerSource = drawer && PIPELINE_DRAWER_KEYS.has(drawer) ? allRows : portfolioData;
   const drawerRows = useMemo(
     () => drawerCat ? drawerSource.filter(drawerCat.filter).sort(drawerCat.sort) : [],
     [drawerSource, drawerCat],
@@ -1054,21 +1096,30 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
         }
 
         /* ── HOVER-EXPAND PANEL — overlay position:absolute, TIDAK mendorong
-           layout (background/section lain diam total). Animasi opacity +
-           transform (translateY) + transition, ease-in-out. Padding penuh
-           di panel sendiri (bukan nempel ke tepi). Warna gelap utk versi
-           Pipeline (kontras dgn teks putih), solid putih utk versi KPI. */
+           layout (background/section lain diam total). Animasi MURNI
+           transform (scale) + transition, TANPA opacity sbg driver — panel
+           tumbuh dari titik tengah-atas CARD (transform-origin: center top),
+           BUKAN dari titik tengah kotak panel penuh itu sendiri. Panel bisa
+           jauh lebih tinggi dari card yang di-hover (isinya sampai 5 baris
+           list) — kalau origin-nya "center center" dari BOX PANEL, titik
+           tumbuhnya jatuh di tengah panel (jauh di bawah card asli, area
+           kosong yang belum kelihatan), bukan dari card itu sendiri (bug
+           dilaporkan user). "center top" pas karena panel & card sama-sama
+           nempel di top:0 wrap — titik itu SELALU persis di card, horizontal
+           tetap center (bukan nyamping/dari pojok). Padding penuh di panel
+           sendiri (bukan nempel ke tepi). Warna gelap utk versi Pipeline
+           (kontras dgn teks putih), solid putih utk versi KPI. */
         .kpi-hover-panel, .pipe-hover-panel {
           position: absolute; left: 0; right: 0; top: 0; z-index: 5;
           border-radius: 14px; padding: 16px 16px 12px;
           display: flex; flex-direction: column; gap: 2px;
-          opacity: 0; pointer-events: none;
-          transform: translateY(-6px); transform-origin: top;
-          transition: opacity .3s cubic-bezier(0.85,0.09,0.15,0.91), transform .3s cubic-bezier(0.85,0.09,0.15,0.91);
+          pointer-events: none;
+          transform: scale(0.01); transform-origin: center top;
+          transition: transform .3s cubic-bezier(0.85,0.09,0.15,0.91);
         }
         .kpi-card-wrap:hover .kpi-hover-panel,
         .pipe-card-wrap:hover .pipe-hover-panel {
-          opacity: 1; pointer-events: auto; transform: translateY(0);
+          pointer-events: auto; transform: scale(1);
         }
         .kpi-hover-panel {
           background: ${C.surface};
@@ -1111,6 +1162,7 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         .hp-row-sub { font-size: 10.5px; color: ${C.textSec}; margin-top: 1px; }
+        .hp-row-status { display: block; margin-top: 4px; }
         .hp-row-dark .hp-row-name { color: #fff; }
         .hp-row-dark .hp-row-sub { color: rgba(255,255,255,0.6); }
         /* Hover: nama proyek berubah ke warna primary — konsisten dgn pola
@@ -1118,23 +1170,21 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
         .hp-row:hover .hp-row-name { color: ${C.teal}; }
         .hp-row-dark:hover .hp-row-name { color: #8FE6D8; }
 
-        /* Badge kecil "Selalu real-time" — microcopy pembeda scope filter
-           (req #8): Pipeline TIDAK terpengaruh dropdown tahun di atasnya. */
-        .pipe-live-badge {
-          display: inline-flex; align-items: center; gap: 5px;
-          margin-left: auto; padding: 3px 9px; border-radius: 20px;
-          background: rgba(62,189,172,0.16); border: 1px solid rgba(62,189,172,0.3);
-          font-size: 10px; font-weight: 700; color: #8FE6D8; white-space: nowrap;
-        }
-        .pipe-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #3EBDAC; flex-shrink: 0; }
-
         @media (prefers-reduced-motion: reduce) {
-          .kpi-hover-panel, .pipe-hover-panel { transition: opacity .01s linear; transform: none; }
+          .kpi-hover-panel, .pipe-hover-panel { transition: transform .01s linear; }
         }
         /* Device tanpa hover asli (mobile/touch) — expand-on-hover dimatikan
-           total, klik langsung ke drawer seperti sebelumnya (req #14). */
-        @media (hover: none) {
-          .kpi-hover-panel, .pipe-hover-panel { display: none; }
+           total, klik langsung ke drawer seperti sebelumnya (req #14).
+           TIGA kondisi sekaligus (OR), bukan cuma "hover:none" saja — ada
+           browser/device mobile nyata yang salah lapor "hover:hover" (mis.
+           WebView tertentu), jadi panel tetap kepencet nempel kebuka waktu
+           di-tap padahal seharusnya mati total di mobile (dilaporkan user:
+           tampilan berantakan, harusnya khusus desktop). pointer:coarse
+           (layar sentuh) dan max-width:768px (breakpoint mobile yg sudah
+           dipakai di seluruh file ini) jadi jaring pengaman tambahan.
+           !important supaya tidak ada rule lain yg bisa menimpanya. */
+        @media (hover: none), (pointer: coarse), (max-width: 768px) {
+          .kpi-hover-panel, .pipe-hover-panel { display: none !important; }
         }
 
         .kpi-num  { font-size: 52px; font-weight: 800; line-height: 1; color: ${C.textH}; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
@@ -1209,9 +1259,22 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
         .drawer-panel { background: ${C.surface}; }
         @media (max-width: 900px) { .coverage-insights-grid { grid-template-columns: 1fr; gap: 16px; } }
         @media (max-width: 768px)  {
-          .hl-root    { padding: 16px 16px 80px; }
+          /* padding-bottom BUKAN 80px lagi — class main (App.jsx) SUDAH
+             menyediakan padding-bottom:72px+safe-area global khusus utk jarak
+             bottom-nav di SEMUA halaman. 80px di sini dobel-reservasi utk hal
+             yang sama, bikin white space kosong berlebih & scroll jadi lebih
+             panjang dari kontennya (dilaporkan user). */
+          .hl-root    { padding: 16px 16px 16px; }
           .cal-btn    { display: none; }
+          /* .kpi-grid pindah row->column di mobile — TAPI align-items:flex-start
+             di rule dasarnya (sengaja, biar tinggi card independen pas row di
+             desktop) di layout column berarti axis silang jadi HORIZONTAL,
+             jadi tiap .kpi-card-wrap ikut shrink-to-fit lebar KONTENnya
+             sendiri alih-alih diregangkan penuh — 3 card jadi beda-beda lebar
+             (dilaporkan user: "tidak rata ukuran cardnya di mobile"). Paksa
+             lebar 100% khusus di breakpoint ini, tinggi tetap independen. */
           .kpi-grid   { flex-direction: column; }
+          .kpi-card-wrap { width: 100%; }
           .pipe-grid  { flex-wrap: wrap; }
           .pipe-card-wrap { flex: 1 1 calc(50% - 7px); }
           /* Grid 2x2 di mobile — panah alur kiri→kanan jadi menyesatkan
@@ -1240,10 +1303,10 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
           .year-chart-tooltip { display:none; }
         }
         @media (max-width: 480px) {
-          .hl-root  { padding: 14px 14px 80px; }
+          .hl-root  { padding: 14px 14px 14px; }
           .hl-title { font-size: 16px; }
         }
-        @media (max-width: 360px) { .hl-root { padding: 10px 10px 80px; } }
+        @media (max-width: 360px) { .hl-root { padding: 10px 10px 10px; } }
       `}</style>
 
       <div className="hl-root">
@@ -1288,7 +1351,7 @@ export default function CoverageDashboard({ lang = "id", data: videoData, onOpen
       </div>
 
       {drawerCat && (
-        <CategoryDrawer cat={drawerCat} count={drawerRows.length} rows={drawerRows}
+        <CategoryDrawer cat={drawerCat} catKey={drawer} count={drawerRows.length} rows={drawerRows}
           onClose={closeDrawer} onOpenDetail={onOpenDetail} t={t} />
       )}
     </>

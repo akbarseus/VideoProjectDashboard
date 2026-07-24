@@ -7,7 +7,7 @@ import { ChevronDown } from "lucide-react";
  * Native <select> tidak dipakai karena daftar opsinya (popup OS) tidak bisa
  * di-style blur/transparan.
  */
-export default function GlassSelect({ value, onChange, options, placeholder, minWidth = 150 }) {
+export default function GlassSelect({ value, onChange, options, placeholder, minWidth = 150, fullWidth = false }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -20,14 +20,16 @@ export default function GlassSelect({ value, onChange, options, placeholder, min
   const current = options.find(o => o.value === value);
 
   return (
-    <div ref={ref} style={{ position:"relative", flexShrink:0, zIndex: open ? 60 : "auto" }}>
+    <div ref={ref} style={{ position:"relative", flexShrink: fullWidth ? 1 : 0, flex: fullWidth ? "1 1 0%" : "none", minWidth: fullWidth ? 0 : "auto", zIndex: open ? 60 : "auto" }}>
       <button type="button" onClick={() => setOpen(o => !o)} style={{
         display:"flex", alignItems:"center", gap:8, padding:"8px 14px", height:34,
         border:"1px solid rgba(15,23,42,0.08)", borderRadius:10,
         background:"rgba(255,255,255,0.55)",
         backdropFilter:"blur(14px) saturate(1.6)", WebkitBackdropFilter:"blur(14px) saturate(1.6)",
         fontSize:12, fontWeight:600, color:"#0F172A", cursor:"pointer",
-        boxShadow:"0 2px 10px rgba(15,23,42,0.06)", minWidth, justifyContent:"space-between",
+        boxShadow:"0 2px 10px rgba(15,23,42,0.06)",
+        width: fullWidth ? "100%" : "auto", minWidth: fullWidth ? 0 : minWidth,
+        justifyContent:"space-between",
         boxSizing:"border-box", whiteSpace:"nowrap",
       }}>
         <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{current ? current.label : placeholder}</span>

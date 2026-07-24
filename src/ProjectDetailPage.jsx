@@ -254,6 +254,7 @@ export default function ProjectDetailPage({ lang = "id", data, initialId, onMobi
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all"); // nilai = teks kolom "Status Video" apa adanya
   const [yearFilter, setYearFilter] = useState(CURRENT_YEAR_STR);
+  const [industryFilter, setIndustryFilter] = useState("all");
   const [visibleCount, setVisibleCount] = useState(PROJECT_BATCH_SIZE);
 
   // Mobile-only: "list" (default) atau "detail" (kartu detail full-screen
@@ -302,8 +303,9 @@ export default function ProjectDetailPage({ lang = "id", data, initialId, onMobi
     const matchSearch = !q || p.name.toLowerCase().includes(q) || p.industry.toLowerCase().includes(q);
     const matchStatus = statusFilter === "all" || p.statusVideoRaw === statusFilter;
     const matchYear = yearFilter === "all" || p.year === yearFilter;
-    return matchSearch && matchStatus && matchYear;
-  }), [rows, deferredSearch, statusFilter, yearFilter]);
+    const matchIndustry = industryFilter === "all" || p.industry === industryFilter;
+    return matchSearch && matchStatus && matchYear && matchIndustry;
+  }), [rows, deferredSearch, statusFilter, yearFilter, industryFilter]);
   const visibleProjects = useMemo(
     () => filtered.slice(0, visibleCount),
     [filtered, visibleCount]
@@ -313,7 +315,7 @@ export default function ProjectDetailPage({ lang = "id", data, initialId, onMobi
   useEffect(() => {
     setVisibleCount(PROJECT_BATCH_SIZE);
     if (listRef.current && !isMobile) listRef.current.scrollTop = 0;
-  }, [deferredSearch, statusFilter, yearFilter, rows, isMobile]);
+  }, [deferredSearch, statusFilter, yearFilter, industryFilter, rows, isMobile]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -407,6 +409,15 @@ export default function ProjectDetailPage({ lang = "id", data, initialId, onMobi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, lang]);
 
+  const industryOptions = useMemo(() => {
+    const present = [...new Set(rows.map(r => String(r.industry || "").trim()).filter(Boolean))].sort();
+    return [
+      { value: "all", label: t("Semua industri","All industries") },
+      ...present.map(i => ({ value: i, label: i })),
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, lang]);
+
   const yearOptions = useMemo(() => ([
     { value: "all", label: t("Semua tahun","All years") },
     ...YEARS.filter(y => y !== "all").map(y => ({
@@ -439,6 +450,7 @@ export default function ProjectDetailPage({ lang = "id", data, initialId, onMobi
             <div style={{ position:"relative" }}>
               <Search size={13} color={C.textMut} style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }} />
               <input
+                className="pd-search-input"
                 placeholder={t("Cari proyek…","Search project…")}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -452,11 +464,13 @@ export default function ProjectDetailPage({ lang = "id", data, initialId, onMobi
               />
             </div>
 
-            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:12 }}>
+            <div style={{ display:"flex", gap:8, marginTop:12 }}>
+              <GlassSelect value={industryFilter} onChange={setIndustryFilter}
+                options={industryOptions} placeholder={t("Semua industri","All industries")} fullWidth />
               <GlassSelect value={statusFilter} onChange={setStatusFilter}
-                options={statusOptions} placeholder={t("Semua status","All statuses")} minWidth={150} />
+                options={statusOptions} placeholder={t("Semua status","All statuses")} fullWidth />
               <GlassSelect value={yearFilter} onChange={setYearFilter}
-                options={yearOptions} placeholder={t("Semua tahun","All years")} minWidth={120} />
+                options={yearOptions} placeholder={t("Semua tahun","All years")} fullWidth />
             </div>
           </div>
 
@@ -557,6 +571,13 @@ export default function ProjectDetailPage({ lang = "id", data, initialId, onMobi
              topbar, jadi filter bisa langsung rapat ke header tanpa jarak. */
           .pd-title { display: none; }
           .pd-page  { padding: 0 14px 24px; }
+
+          /* iOS Safari auto-zoom in ke input begitu di-tap kalau font-size-nya
+             <16px — browser anggap itu perlu di-zoom biar kebaca. Efeknya
+             layout kelihatan "berantakan"/ketarik pas keyboard muncul
+             (dilaporkan user). 16px adalah threshold aman minimum, jadi
+             browser tidak pernah men-trigger auto-zoom itu sama sekali. */
+          .pd-search-input { font-size: 16px !important; }
 
           .proj-grid {
             grid-template-columns: 1fr;

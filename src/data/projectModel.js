@@ -34,6 +34,8 @@ export function normalizeProject(p = {}, index = 0) {
     catatanSchedule: p.catatanSchedule || "",
     koordinat: p.koordinat || "",
     linkPreview: p.linkPreview || "",
+    tipe: p.tipe || "Portofolio",
+    tanggalDokumentasi: p.tanggalDokumentasi || "",
   };
 }
 

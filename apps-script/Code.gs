@@ -67,6 +67,12 @@ const FIELD_ALIASES = {
   // "Link preview" khusus di proyek berstatus L3 (Editing/Internal Review/
   // Client Review), lihat src/LinkTiles.jsx (isPreviewEligible).
   linkPreview:     ["link preview", "frame.io", "frame io", "preview link"],
+  // Kolom D — dropdown "Portofolio" / "Others". Others tidak dihitung di KPI
+  // "Video Progress Overall" (khusus Portofolio), tapi tetap dihitung di
+  // "Video Production Pipeline". Lihat specs/dashboard-tipe-kpi-and-list-revisions.md.
+  tipe:            ["tipe", "type"],
+  // Kolom H — dipakai card "On Documentation Schedule" di Dashboard.
+  tanggalDokumentasi: ["tanggal dokumentasi"],
 };
 
 function normalizeHeader(h) {
@@ -256,6 +262,8 @@ function readProjects() {
       catatanSchedule: getDisp(r, colMap.catatanSchedule), // kolom N — teks status utk kartu "On Schedule"
       koordinat:       getDisp(r, colMap.koordinat),       // kolom P — koordinat lokasi site, mentah
       linkPreview:     getLink(r, colMap.linkPreview),     // kolom I — URL Frame.io, manual
+      tipe:            getDisp(r, colMap.tipe) || "Portofolio", // kolom D — Portofolio/Others
+      tanggalDokumentasi: getDisp(r, colMap.tanggalDokumentasi), // kolom H
     });
   }
 
